@@ -1,0 +1,95 @@
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../../bower_components/iron-localstorage/iron-localstorage.html">
+<link rel="import" href="../../bower_components/paper-dialog/paper-dialog.html">
+<dom-module id="device-name">
+    <template>
+        <style>
+        :host {
+            display: inline-block;
+            width: 160px;
+        }
+        
+        .name-label {
+            @apply(--paper-font-subhead);
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .name-label:hover {
+            color: #4285f4;
+        }
+
+        :root {
+            /* Label and underline color when the input is not focused */
+            --paper-input-container-color: #333;
+            /* Label and underline color when the input is focused */
+            --paper-input-container-focus-color: #4285f4;
+            /* Label and underline color when the input is invalid */
+            --paper-input-container-invalid-color: red;
+            /* Input foreground color */
+            --paper-input-container-input-color: #333;
+        }
+        
+        @media all and (max-height: 370px) {
+            :host {}
+        }
+        
+        paper-dialog {
+            width: 300px;
+            text-align: left;
+        }
+        </style>
+        <div class="name-label" on-tap="_open">{{name}}</div>
+        <paper-dialog id="dialog" entry-animation="scale-up-animation" exit-animation="fade-out-animation" with-backdrop>
+            <h2>Name this Device</h2>
+            <p>
+                <paper-input id="input" value="{{name}}" label="Name this Device" char-counter maxlength="18" on-keypress="_keyPressed" autofocus></paper-input>
+            </p>
+            <div class="buttons">
+                <paper-button dialog-dismiss>Cancel</paper-button>
+                <paper-button dialog-confirm on-tap="_sendNameToServer">Rename</paper-button>
+            </div>
+        </paper-dialog>
+        <iron-localstorage name="device-name" value="{{name}}" iron-localstorage-load="_nameChanged"></iron-localstorage>
+    </template>
+    <script>
+    'use strict';
+    Polymer({
+        is: 'device-name',
+        properties: {
+            name: {
+                observer: '_nameChanged'
+            }
+        },
+        _open: function() {
+            this.$.dialog.open();
+        },
+        _nameChanged: function(name) {
+            if (!name) {
+                return;
+            }
+            this.cancelAsync(this.timer);
+            this.timer = this.async(function() {
+                if (!app.conn.notifyServer) {
+                    this._nameChanged(name);
+                    return;
+                }
+                this._sendNameToServer(name);
+
+            }, 300);
+
+        },
+        _sendNameToServer: function(name) {
+            app.conn.notifyServer({
+                serverMsg: 'device-name',
+                name: name
+            });
+        },
+        _keyPressed: function(e) {
+            if (e.which === 13 || e.charCode === 13) {
+                this.$.input.inputElement.blur();
+            }
+        }
+    });
+    </script>
+</dom-module>
